@@ -52,6 +52,10 @@
               "target": "Package",
               "version": "[6.0.6, )"
             },
+            "Microsoft.AspNetCore.Identity.UI": {
+              "target": "Package",
+              "version": "[6.0.6, )"
+            },
             "Microsoft.EntityFrameworkCore.Sqlite": {
               "target": "Package",
               "version": "[6.0.5, )"
@@ -62,9 +66,9 @@
               "target": "Package",
               "version": "[6.0.5, )"
             },
-            "Swashbuckle.AspNetCore": {
+            "NSwag.AspNetCore": {
               "target": "Package",
-              "version": "[6.2.3, )"
+              "version": "[13.16.1, )"
             }
           },
           "imports": [
