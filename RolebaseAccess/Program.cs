@@ -24,15 +24,8 @@ options.UseSqlite(
     builder.Configuration.GetConnectionString("DefaultConnection")
 ));
 
-builder.Services.AddAuthentication(options => {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(jwt => {
-    var key = Encoding.ASCII.GetBytes(builder.Configuration["JwtConfig:Secret"]);
-    jwt.SaveToken = true;
-    jwt.TokenValidationParameters = new TokenValidationParameters{
+var key = Encoding.ASCII.GetBytes(builder.Configuration["JwtConfig:Secret"]);
+var tokenValidationParameters = new TokenValidationParameters{
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = false,
@@ -40,9 +33,19 @@ builder.Services.AddAuthentication(options => {
         ValidateLifetime = true,
         RequireExpirationTime = false
     };
+builder.Services.AddSingleton(tokenValidationParameters);
+
+builder.Services.AddAuthentication(options => {
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(jwt => {
+    jwt.SaveToken = true;
+    jwt.TokenValidationParameters = tokenValidationParameters;
 });
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
 .AddEntityFrameworkStores<ApiDbContext>();
 
 builder.Services.AddControllers();
