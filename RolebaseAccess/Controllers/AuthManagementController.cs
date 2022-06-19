@@ -22,13 +22,17 @@ namespace RolebaseAccess.Controllers
         private readonly JwtConfig _jwtConfig;
         private readonly TokenValidationParameters _tokenValidationParams;
         private readonly ApiDbContext _apiDbContext;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ILogger<SetupController> _logger;
 
-        public AuthManagementController(UserManager<IdentityUser> userManager, IOptionsMonitor<JwtConfig> optionsMonitor, TokenValidationParameters tokenValidationParams, ApiDbContext apiDbContext)
+        public AuthManagementController(UserManager<IdentityUser> userManager, IOptionsMonitor<JwtConfig> optionsMonitor, TokenValidationParameters tokenValidationParams, ApiDbContext apiDbContext, RoleManager<IdentityRole> roleManager,ILogger<SetupController> logger)
         {
             _userManager = userManager;
             _jwtConfig = optionsMonitor.CurrentValue;
             _tokenValidationParams = tokenValidationParams;
             _apiDbContext = apiDbContext;
+            _roleManager = roleManager;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -52,6 +56,8 @@ namespace RolebaseAccess.Controllers
                 var isCreated = await _userManager.CreateAsync(newUser, user.Password);
                 if(isCreated.Succeeded)
                 {
+                    //assign user role
+                    await _userManager.AddToRoleAsync(newUser, "Admin");
                     var jwtToken = await GenerateJwtToken(newUser);
 
                     return Ok(jwtToken);
@@ -279,16 +285,11 @@ namespace RolebaseAccess.Controllers
         {
             var jwtTokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtConfig.Secret);
+            var claims = await GetAllValidClaims(user);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new []
-                {
-                    new Claim("Id", user.Id),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                }),
-                Expires = DateTime.UtcNow.AddSeconds(30),
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddMinutes(30),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -329,6 +330,42 @@ namespace RolebaseAccess.Controllers
             dateTimeVal = dateTimeVal.AddSeconds(unixTimeStamp).ToUniversalTime();
 
             return dateTimeVal;
+        }
+        // Get all valid claims for the corresponding user
+        private async Task<List<Claim>> GetAllValidClaims(IdentityUser user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim("Id", user.Id), 
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            // Getting the claims that we have assigned to the user
+            var userClaims = await _userManager.GetClaimsAsync(user);
+            claims.AddRange(userClaims);
+
+            // Get the user role and add it to the claims
+            var userRoles = await _userManager.GetRolesAsync(user);
+
+            foreach(var userRole in userRoles)
+            {
+                var role = await _roleManager.FindByNameAsync(userRole);
+
+                if(role != null)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, userRole));
+
+                    var roleClaims = await _roleManager.GetClaimsAsync(role);
+                    foreach(var roleClaim in roleClaims)
+                    {
+                        claims.Add(roleClaim);
+                    }
+                }
+            }
+
+            return claims;
         }
     }
 }

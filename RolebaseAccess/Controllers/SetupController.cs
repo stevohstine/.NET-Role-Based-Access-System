@@ -72,6 +72,7 @@ namespace RolebaseAccess.Controllers
         [Route("AddUserToRole")]
         public async Task<IActionResult> AddUserToRole(string email, string roleName)
         {
+            //check if user exist
             var user = await _userManager.FindByEmailAsync(email);
             if(user == null)
             {
@@ -107,6 +108,65 @@ namespace RolebaseAccess.Controllers
                     error = "Role assignment failed"
                 });
             }
+        }
+
+        [HttpGet]
+        [Route("GetUserRoles")]
+        public async Task<IActionResult> GetUserRoles(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if(user == null)
+            {
+                _logger.LogInformation($"The user with the email {email} does not exist");
+                return BadRequest(new {
+                    error = "User does not exist"
+                });
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            return Ok(roles);
+        }
+
+        [HttpPost]
+        [Route("RemoveUserFromRole")]
+        public async Task<IActionResult> RemoveUserFromRole(string email, string roleName)
+        {
+            //check if user exist
+            var user = await _userManager.FindByEmailAsync(email);
+            if(user == null)
+            {
+                _logger.LogInformation($"The user with the email {email} does not exist");
+                return BadRequest(new {
+                    error = "User does not exist"
+                });
+            }
+
+            //check if the role exists
+            var roleExist = await _roleManager.RoleExistsAsync(roleName);
+
+            if(!roleExist)
+            {
+                _logger.LogInformation($"The role {roleName} does not exist");
+                return BadRequest(new {
+                    error = "Role does not exist"
+                });
+            }
+
+            var result = await _userManager.RemoveFromRoleAsync(user, roleName);
+
+            if(result.Succeeded)
+            {
+                return Ok(new {
+                    result = "User has been removed from role"
+                });
+            }
+            else
+            {
+                return BadRequest(new {
+                    error = "Failed to remove user from role"
+                });
+            }
+
         }
     }
 }

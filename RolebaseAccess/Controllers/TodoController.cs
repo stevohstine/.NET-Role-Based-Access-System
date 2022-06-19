@@ -9,7 +9,7 @@ namespace RolebaseAccess.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
     public class TodoController : ControllerBase
     {
         private readonly ApiDbContext _context;
@@ -28,6 +28,7 @@ namespace RolebaseAccess.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "DepartmentPolicy")]
         public async Task<IActionResult> Create(ItemData data)
         {
             if(ModelState.IsValid)

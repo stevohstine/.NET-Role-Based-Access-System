@@ -45,6 +45,11 @@ builder.Services.AddAuthentication(options => {
     jwt.TokenValidationParameters = tokenValidationParameters;
 });
 
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy("DepartmentPolicy",
+        policy => policy.RequireClaim("department"));
+});
+
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
 .AddEntityFrameworkStores<ApiDbContext>();
 
